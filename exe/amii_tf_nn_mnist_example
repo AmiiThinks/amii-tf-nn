@@ -1,0 +1,114 @@
+#!/usr/bin/env python
+import os
+import tensorflow as tf
+from tensorflow.examples.tutorials.mnist import input_data
+from amii_tf_nn.data import Data, BatchedData
+from amii_tf_nn.data_set import DataSet
+from amii_tf_nn.experiment import Experiment
+from amii_tf_nn.cross_entropy_classifier import CrossEntropyClassifer
+from amii_tf_nn.network_model import NetworkModel
+from amii_tf_nn.layer import Layer
+from amii_tf_nn.trainer import Trainer
+
+
+class AdamCrossEntropyClassifer(CrossEntropyClassifer):
+    def _create_optimizer(self, surrogate_eval_node):
+        with tf.name_scope('adam_training'):
+            node = tf.train.AdamOptimizer(
+                **self.optimization_params
+            ).minimize(surrogate_eval_node)
+        return node
+
+
+def mnist_data():
+    mnist = input_data.read_data_sets("tmp/MNIST_data/", one_hot=True)
+    return DataSet(
+        training=Data(mnist.train.images, mnist.train.labels),
+        validation=Data(
+            mnist.validation.images,
+            mnist.validation.labels
+        ),
+        testing=Data(mnist.test.images, mnist.test.labels)
+    )
+
+
+def batched_mnist_data(batch_size):
+    mnist = mnist_data()
+    for k in mnist.keys():
+        mnist[k] = BatchedData.from_data(batch_size, mnist[k])
+    return mnist
+
+
+def main():
+    experiment = Experiment(
+        'amii_tf_nn_mnist_example',
+        root=os.path.join(os.getcwd(), 'tmp'),
+        seed=1,
+        tag='1'
+    )
+    experiment.ensure_present()
+
+    data = batched_mnist_data(100)
+
+    input_node = tf.placeholder(
+        tf.float32,
+        shape=(None, data.num_features()),
+        name="input"
+    )
+
+    target_node = tf.placeholder(
+        tf.float32,
+        shape=(None, data.num_outputs()),
+        name='target'
+    )
+
+    hidden = 1024
+    adln = AdamCrossEntropyClassifer(
+        'AdamDoubleLayerFeedForward',
+        (lambda: NetworkModel(
+            'adln',
+            input_node,
+            Layer.Config(
+                data.num_features(),
+                hidden,
+                transfer=tf.nn.relu,
+                scale=1.0,
+                name='layer_1'
+            ),
+            Layer.Config(
+                hidden,
+                data.num_outputs(),
+                transfer=tf.nn.softmax,
+                scale=1.0,
+                name='layer_2'
+            ),
+            seed=experiment.seed
+        )),
+        target_node,
+        learning_rate=0.1
+    )
+
+    asln = AdamCrossEntropyClassifer(
+        'AdamSingleLayerFeedForward',
+        (lambda: NetworkModel(
+            'asln',
+            input_node,
+            Layer.Config(
+                data.num_features(),
+                data.num_outputs(),
+                transfer=tf.nn.softmax,
+                scale=1.0,
+                name='layer'
+            ),
+            seed=experiment.seed
+        )),
+        target_node,
+        learning_rate=0.1
+    )
+
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        Trainer(sess, experiment, data, adln, asln, batches_per_epoch=2).run()
+
+
+if __name__ == '__main__': main()
