@@ -83,7 +83,7 @@ def main():
         (lambda: NetworkModel(
             'adln',
             input_node,
-            Layer.Config(
+            Layer.FullyConnectedConfig(
                 data.num_features(),
                 hidden,
                 transfer=tf.nn.relu,
@@ -96,7 +96,7 @@ def main():
                     )
                 )
             ),
-            Layer.Config(
+            Layer.FullyConnectedConfig(
                 hidden,
                 data.num_outputs(),
                 transfer=tf.nn.softmax,
@@ -120,7 +120,7 @@ def main():
         (lambda: NetworkModel(
             'asln',
             input_node,
-            Layer.Config(
+            Layer.FullyConnectedConfig(
                 data.num_features(),
                 data.num_outputs(),
                 transfer=tf.nn.softmax,
