@@ -9,6 +9,8 @@ class Layer(object):
             self,
             i,
             o,
+            training_data_inputs=None,
+            training_data_targets=None,
             scale=1.0,
             transfer=tf.identity,
             name='layer_1'
@@ -19,11 +21,32 @@ class Layer(object):
             self.scale = scale
             self.transfer = transfer
 
+            self.input_scaling = 1.0
+            self.input_offset = 0.0
+            if not(training_data_inputs is None):
+                self.input_scaling = training_data_inputs.std(0)
+                self.input_scaling[self.input_scaling == 0] = 1.0
+                self.input_offset = training_data_inputs.mean(0)
+
+            self.output_scaling = 1.0
+            self.output_offset = 0.0
+            if not(training_data_targets is None):
+                self.output_scaling = training_data_targets.std(0)
+                self.output_offset = training_data_targets.mean(0)
+
         def is_compatible_with(self, other): return self.o == other.i
         def construct(self, input_tensor, seed=1):
             # Adding a name scope ensures logical grouping of the layers in the
             # graph.
             with tf.name_scope(self.name):
+                with tf.name_scope('input_normalization'):
+                    input_tensor = (
+                        input_tensor - tf.constant(self.input_offset, dtype=tf.float32)
+                    ) / tf.constant(self.input_scaling, dtype=tf.float32)
+                    tf.summary.histogram(
+                        'inputs_after_normalization',
+                        input_tensor
+                    )
                 with tf.name_scope('weights'):
                     weights = tf.Variable(
                         tf.truncated_normal(
@@ -45,6 +68,16 @@ class Layer(object):
                     preactivate = tf.constant(self.scale) * preactivate_bs
                     tf.summary.histogram(
                         'pre_activations',
+                        preactivate
+                    )
+                with tf.name_scope('output_normalization'):
+                    # TODO Is this the correct way to do output normalization
+                    # with a non-linear transfer?
+                    preactivate = (
+                        preactivate * tf.constant(self.output_scaling, dtype=tf.float32)
+                    ) + tf.constant(self.output_offset, dtype=tf.float32)
+                    tf.summary.histogram(
+                        'pre_activations_after_normalization',
                         preactivate
                     )
                 activations = self.transfer(preactivate, name='activation')
