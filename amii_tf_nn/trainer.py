@@ -54,9 +54,7 @@ class Trainer(_Trainer):
 
     def eval(self, dist_name, i):
         for e in self.monitored_estimators:
-            for batch, j in self.data[dist_name].each_batch(
-                self.batches_per_epoch
-            ):
+            for batch, j in self.data[dist_name].each_batch(1):
                 surrogate_eval = e.estimator.run_surrogate_eval(
                     self.sess,
                     batch.x,

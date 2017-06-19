@@ -41,7 +41,8 @@ class Layer(object):
             with tf.name_scope(self.name):
                 with tf.name_scope('input_normalization'):
                     input_tensor = (
-                        input_tensor - tf.constant(self.input_offset, dtype=tf.float32)
+                        input_tensor -
+                        tf.constant(self.input_offset, dtype=tf.float32)
                     ) / tf.constant(self.input_scaling, dtype=tf.float32)
                     tf.summary.histogram(
                         'inputs_after_normalization',
@@ -74,7 +75,8 @@ class Layer(object):
                     # TODO Is this the correct way to do output normalization
                     # with a non-linear transfer?
                     preactivate = (
-                        preactivate * tf.constant(self.output_scaling, dtype=tf.float32)
+                        preactivate *
+                        tf.constant(self.output_scaling, dtype=tf.float32)
                     ) + tf.constant(self.output_offset, dtype=tf.float32)
                     tf.summary.histogram(
                         'pre_activations_after_normalization',

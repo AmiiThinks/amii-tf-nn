@@ -30,10 +30,12 @@ class DataStream(Data):
 
     def next(self, n):
         old_i = self.i
-        self.i += n
-        if self.i >= len(self):
-            self.i = self.i - len(self)
-            d = self[old_i:] + self[:self.i]
+        self.i = (self.i + n) % len(self)
+        if n + old_i >= len(self):
+            d = self[old_i:]
+            for _ in range((n - len(d)) // len(self)):
+                d += self
+            d += self[:self.i]
             assert(len(d) == n)
             return d
         else:
