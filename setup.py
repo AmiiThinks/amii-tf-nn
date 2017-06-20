@@ -8,7 +8,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'future == 0.15.2',
-        'setuptools == 20.2.2',
+        'setuptools >= 20.2.2',
         'pyyaml == 3.12',
         'tensorflow == 1.2'
     ],
