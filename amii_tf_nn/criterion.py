@@ -1,4 +1,4 @@
-from . import tensorflow as tf_extra
+from . import tf_extra
 
 
 class Criterion(object):

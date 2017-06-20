@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from . import tensorflow as tf_extra
+from . import tf_extra
 
 
 class Layer(object):

@@ -25,7 +25,7 @@ class DataStream(Data):
     def from_data(cls, data): return cls(data.x, data.y)
 
     def __init__(self, *args, **kwargs):
-        super(DataStream, self).__init__(*args, *kwargs)
+        super(DataStream, self).__init__(*args, **kwargs)
         self.i = 0
 
     def next(self, n):
@@ -48,7 +48,7 @@ class BatchedData(DataStream):
         return cls(batch_size, data.x, data.y)
 
     def __init__(self, batch_size, *args, **kwargs):
-        super(BatchedData, self).__init__(*args, *kwargs)
+        super(BatchedData, self).__init__(*args, **kwargs)
         self.batch_size = batch_size
 
     def each_batch(self, num_batches=None):

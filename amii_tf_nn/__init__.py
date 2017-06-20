@@ -8,5 +8,5 @@ from .experiment import *
 from .layer import *
 from .monitored_estimator import *
 from .network_model import *
-from .tensorflow import *
+from .tf_extra import *
 from .trainer import *
