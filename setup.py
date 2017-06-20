@@ -9,7 +9,8 @@ setup(
     install_requires=[
         'future == 0.15.2',
         'setuptools == 20.2.2',
-        'pyyaml == 3.12'
+        'pyyaml == 3.12',
+        'tensorflow == 1.2'
     ],
     tests_require=['pytest', 'pytest-cov'],
     setup_requires=['pytest-runner'],
