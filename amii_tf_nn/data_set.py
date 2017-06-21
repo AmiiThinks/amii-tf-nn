@@ -21,5 +21,9 @@ class DataSet(object):
     def keys(self): return self.data.keys()
     def values(self): return self.data.values()
     def items(self): return self.data.items()
-    def num_features(self): return next(iter(self.data.values())).x.shape[1]
-    def num_outputs(self): return next(iter(self.data.values())).y.shape[1]
+
+    def num_features(self):
+        return next(iter(self.data.values())).num_features()
+
+    def num_outputs(self):
+        return next(iter(self.data.values())).num_outputs()
