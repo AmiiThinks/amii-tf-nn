@@ -16,8 +16,20 @@ class Data(object):
             np.concatenate((self.x, other.x)),
             np.concatenate((self.y, other.y))
         )
-    def num_features(self): return self.x.shape[1]
-    def num_outputs(self): return self.y.shape[1]
+
+    def num_features(self):
+        try:
+            n = self.x.shape[1]
+        except IndexError:
+            n = 1
+        return n
+
+    def num_outputs(self):
+        try:
+            n = self.y.shape[1]
+        except IndexError:
+            n = 1
+        return n
 
 
 class DataStream(Data):
