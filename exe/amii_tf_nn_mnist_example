@@ -5,13 +5,27 @@ from tensorflow.examples.tutorials.mnist import input_data
 from amii_tf_nn.data import Data, BatchedData
 from amii_tf_nn.data_set import DataSet
 from amii_tf_nn.experiment import Experiment
-from amii_tf_nn.cross_entropy_classifier import CrossEntropyClassifer
+from amii_tf_nn.classifier import CrossEntropyClassifer
 from amii_tf_nn.network_model import NetworkModel
 from amii_tf_nn.layer import Layer
 from amii_tf_nn.trainer import Trainer
 
 
 class AdamCrossEntropyClassifer(CrossEntropyClassifer):
+    def _create_evals(self):
+        with tf.name_scope('accuracy'):
+            with tf.name_scope('correct_prediction'):
+                correct_prediction = tf.equal(
+                    tf.argmax(self.model.post_activation(), 1),
+                    tf.argmax(self.target_node, 1)
+                )
+            acc = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        with tf.name_scope('L2_distance'):
+            distance = 1 / 2.0 * tf.reduce_mean(
+                tf.square(self.model.post_activation() - self.target_node)
+            )
+        return {'accuracy': acc, 'L2_distance': distance}
+
     def _create_optimizer(self, surrogate_eval_node):
         with tf.name_scope('adam_training'):
             node = tf.train.AdamOptimizer(

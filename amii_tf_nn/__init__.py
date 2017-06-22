@@ -1,5 +1,5 @@
 from .criterion import *
-from .cross_entropy_classifier import *
+from .classifier import *
 from .data_set import *
 from .data import *
 from .debug import *
