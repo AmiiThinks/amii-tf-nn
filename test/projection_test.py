@@ -1,25 +1,42 @@
 from amii_tf_nn.projection import l1_projection_to_simplex
 import tensorflow as tf
-import pytest
 
 
-def test_l1_no_negative():
-    patient = l1_projection_to_simplex(tf.constant([2.0, 8.0, 0.0]))
-    with tf.Session() as sess:
-        print(sess.run(patient))
-        strat = sess.run(patient)
-        x_strat = [0.2, 0.8, 0.0]
-        assert len(strat) == len(x_strat)
-        for i in range(len(strat)):
-            assert strat[i] == pytest.approx(x_strat[i])
+class ProjectionTest(tf.test.TestCase):
+    def test_l1_no_negative(self):
+        with self.test_session():
+            self.assertAllClose(
+                l1_projection_to_simplex(tf.constant([2.0, 8.0, 0.0])).eval(),
+                [0.2, 0.8, 0.0]
+            )
+
+    def test_l1_with_negative(self):
+        with self.test_session():
+            self.assertAllClose(
+                l1_projection_to_simplex(tf.constant([2.0, 8.0, -5.0])).eval(),
+                [0.2, 0.8, 0.0]
+            )
+
+    def test_l1_multiple_rows(self):
+        patient = l1_projection_to_simplex(
+            tf.transpose(
+                tf.constant(
+                    [
+                        [2.0, 8.0, -5.0],
+                        [9.5, 0.4, 0.1]
+                    ]
+                )
+            )
+        )
+        with self.test_session():
+            self.assertAllClose(
+                tf.transpose(patient).eval(),
+                [
+                    [0.2, 0.8, 0.0],
+                    [0.95, 0.04, 0.01]
+                ]
+            )
 
 
-def test_l1_with_negative():
-    patient = l1_projection_to_simplex(tf.constant([2.0, 8.0, -5.0]))
-    with tf.Session() as sess:
-        print(sess.run(patient))
-        strat = sess.run(patient)
-        x_strat = [0.2, 0.8, 0.0]
-        assert len(strat) == len(x_strat)
-        for i in range(len(strat)):
-            assert strat[i] == pytest.approx(x_strat[i])
+if __name__ == '__main__':
+    tf.test.main()
