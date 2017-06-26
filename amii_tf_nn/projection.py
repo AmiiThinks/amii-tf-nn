@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-def l1_projection_to_simplex(tensor, use_locking=False):
+def l1_projection_to_simplex(tensor):
     non_negative_regrets = tf.maximum(0.0, tf.convert_to_tensor(tensor))
     strat = non_negative_regrets / tf.reduce_sum(non_negative_regrets, axis=0)
     return tf.where(
