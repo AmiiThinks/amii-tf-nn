@@ -13,13 +13,29 @@ class Layer(object):
             training_data_targets=None,
             scale=1.0,
             transfer=tf.identity,
-            name='layer_1'
+            name='layer_1',
+            weight_init=None,
+            bias_init=(
+                lambda dims, *args, **kwargs: tf.constant(0.1, shape=dims)
+            )
         ):
             self.name = name
             self.i = i
             self.o = o
             self.scale = scale
             self.transfer = transfer
+            self.weight_init = weight_init
+            if weight_init is None:
+                self.weight_init = (
+                    lambda dims, *args, **kwargs:
+                        tf.truncated_normal(
+                            dims,
+                            stddev=1.0 / np.sqrt(i + 1),
+                            **kwargs
+                        )
+                )
+
+            self.bias_init = bias_init
 
             self.input_scaling = 1.0
             self.input_offset = 0.0
@@ -50,15 +66,11 @@ class Layer(object):
                     )
                 with tf.name_scope('weights'):
                     weights = tf.Variable(
-                        tf.truncated_normal(
-                            [self.i, self.o],
-                            stddev=1.0 / np.sqrt(self.i + 1),
-                            seed=seed
-                        )
+                        self.weight_init([self.i, self.o], seed=seed)
                     )
                     tf_extra.variable_summaries(weights)
                 with tf.name_scope('biases'):
-                    biases = tf.Variable(tf.constant(0.1, shape=[self.o]))
+                    biases = tf.Variable(self.bias_init([self.o]))
                     tf_extra.variable_summaries(biases)
                 with tf.name_scope('scaled_Wx_plus_b'):
                     preactivate_bs = tf.matmul(input_tensor, weights) + biases
