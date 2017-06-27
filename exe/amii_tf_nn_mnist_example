@@ -2,6 +2,7 @@
 import os
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
+import numpy as np
 from amii_tf_nn.data import Data, BatchedData
 from amii_tf_nn.data_set import DataSet
 from amii_tf_nn.experiment import Experiment
@@ -87,14 +88,28 @@ def main():
                 hidden,
                 transfer=tf.nn.relu,
                 scale=1.0,
-                name='layer_1'
+                name='layer_1',
+                weight_init=lambda *dims: (
+                    tf.truncated_normal(
+                        dims,
+                        stddev=1.0 / np.sqrt(data.num_features() + 1),
+                        seed=experiment.seed
+                    )
+                )
             ),
             Layer.Config(
                 hidden,
                 data.num_outputs(),
                 transfer=tf.nn.softmax,
                 scale=1.0,
-                name='layer_2'
+                name='layer_2',
+                weight_init=lambda *dims: (
+                    tf.truncated_normal(
+                        dims,
+                        stddev=1.0 / np.sqrt(hidden + 1),
+                        seed=experiment.seed
+                    )
+                )
             ),
             seed=experiment.seed
         )),
@@ -112,9 +127,15 @@ def main():
                 data.num_outputs(),
                 transfer=tf.nn.softmax,
                 scale=1.0,
-                name='layer'
-            ),
-            seed=experiment.seed
+                name='layer',
+                weight_init=lambda *dims: (
+                    tf.truncated_normal(
+                        dims,
+                        stddev=1.0 / np.sqrt(data.num_features() + 1),
+                        seed=experiment.seed
+                    )
+                )
+            )
         )),
         target_node,
         learning_rate=0.1

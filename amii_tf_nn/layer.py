@@ -15,9 +15,7 @@ class Layer(object):
             transfer=tf.identity,
             name='layer_1',
             weight_init=None,
-            bias_init=(
-                lambda dims, *args, **kwargs: tf.constant(0.1, shape=dims)
-            )
+            bias_init=lambda *dims: tf.constant(0.1, shape=dims)
         ):
             self.name = name
             self.i = i
@@ -27,11 +25,10 @@ class Layer(object):
             self.weight_init = weight_init
             if weight_init is None:
                 self.weight_init = (
-                    lambda dims, *args, **kwargs:
+                    lambda *dims:
                         tf.truncated_normal(
                             dims,
-                            stddev=1.0 / np.sqrt(i + 1),
-                            **kwargs
+                            stddev=1.0 / np.sqrt(i + 1)
                         )
                 )
 
@@ -51,7 +48,7 @@ class Layer(object):
                 self.output_offset = training_data_targets.mean(0)
 
         def is_compatible_with(self, other): return self.o == other.i
-        def construct(self, input_tensor, seed=1):
+        def construct(self, input_tensor):
             # Adding a name scope ensures logical grouping of the layers in the
             # graph.
             with tf.name_scope(self.name):
@@ -66,11 +63,11 @@ class Layer(object):
                     )
                 with tf.name_scope('weights'):
                     weights = tf.Variable(
-                        self.weight_init([self.i, self.o], seed=seed)
+                        self.weight_init(self.i, self.o)
                     )
                     tf_extra.variable_summaries(weights)
                 with tf.name_scope('biases'):
-                    biases = tf.Variable(self.bias_init([self.o]))
+                    biases = tf.Variable(self.bias_init(self.o))
                     tf_extra.variable_summaries(biases)
                 with tf.name_scope('scaled_Wx_plus_b'):
                     preactivate_bs = tf.matmul(input_tensor, weights) + biases

@@ -17,15 +17,10 @@ class NetworkModel(object):
         for i in range(len(layer_configs) - 1):
             assert(layer_configs[i].is_compatible_with(layer_configs[i + 1]))
 
-        if 'seed' not in kwargs:
-            kwargs['seed'] = 6674
-
         with tf.name_scope(self.name):
             self.layers = []
             for layer in layer_configs:
-                self.layers.append(
-                    layer.construct(input_node, seed=kwargs['seed'])
-                )
+                self.layers.append(layer.construct(input_node))
                 input_node = self.layers[-1].y_hat
 
     def pre_activation(self): return self.layers[-1].z_hat
