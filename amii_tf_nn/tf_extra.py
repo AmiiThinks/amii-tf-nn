@@ -17,15 +17,3 @@ def variable_summaries(var):
         tf.summary.scalar('max', tf.reduce_max(var))
         tf.summary.scalar('min', tf.reduce_min(var))
         tf.summary.histogram('histogram', var)
-
-
-def criterion_variable(name):
-    v_name = name + '_mean'
-    try:
-        with tf.variable_scope(name):
-            v = tf.get_variable(v_name, [])
-        tf.summary.scalar(name, v)
-    except ValueError as e:
-        with tf.variable_scope(name, reuse=True):
-            v = tf.get_variable(v_name, [])
-    return v
