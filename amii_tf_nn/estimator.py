@@ -14,6 +14,7 @@ class Estimator(object):
         self.target_node = target_node
         self.optimization_params = optimization_params
         with tf.name_scope(self.name):
+            self.name_scope = tf.contrib.framework.get_name_scope()
             self.model = model_factory()
             surrogate_eval_node, surrogate_eval_name =\
                 self._create_surrogate_eval()

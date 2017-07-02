@@ -26,8 +26,7 @@ class Experiment(object):
         return path.exists(self.path()) and path.exists(self.config_file())
 
     def ensure_present(self):
-        if not self.exists():
-            makedirs(self.path())
+        if not path.exists(self.path()): makedirs(self.path())
         with open(self.config_file(), 'w') as f:
             dump(self.config(), stream=f, default_flow_style=False)
         return self

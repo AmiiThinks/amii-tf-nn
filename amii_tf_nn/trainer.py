@@ -31,10 +31,12 @@ class Trainer(_Trainer):
     def __init__(self, sess, experiment, data, *estimators, **kwargs):
         super(Trainer, self).__init__(data, **kwargs)
         self.sess = sess
-        self.merged_summary = tf.summary.merge_all()
         self.combined_events_writer = tf.summary.FileWriter(
             experiment.path(),
             sess.graph
+        )
+        self.criterion_summary_op = tf.summary.merge(
+            tf.get_collection(key='summaries', scope='criteria')
         )
         self.monitored_estimators = []
         for e in estimators:
@@ -61,8 +63,8 @@ class Trainer(_Trainer):
                     batch.y
                 )
                 eval_vals = e.estimator.run_evals(self.sess, batch.x, batch.y)
-                summary = self.sess.run(
-                    self.merged_summary,
+                summaries = self.sess.run(
+                    [e.summary_op, self.criterion_summary_op],
                     feed_dict=e.estimator.to_feed_dict(
                         batch.x,
                         batch.y,
@@ -70,7 +72,8 @@ class Trainer(_Trainer):
                         eval_vals=eval_vals
                     )
                 )
-                e.writers[dist_name].add_summary(
-                    summary,
-                    i * self.batches_per_epoch + j
-                )
+                for s in summaries:
+                    e.writers[dist_name].add_summary(
+                        s,
+                        i * self.batches_per_epoch + j
+                    )
