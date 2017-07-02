@@ -9,11 +9,10 @@ class Criterion(object):
         try:
             with tf.variable_scope(criteria_scope, reuse=True):
                 self.variable = tf.get_variable(name, [])
-            tf.summary.scalar(name, self.variable)
         except ValueError as e:
             with tf.variable_scope(criteria_scope):
                 self.variable = tf.get_variable(name, [])
-            tf.summary.scalar(name, self.variable)
+            tf.summary.scalar(criteria_scope + '/' + name, self.variable)
 
     def run(self, sess, *args, **kwargs):
         return sess.run(self.node, *args, **kwargs)
