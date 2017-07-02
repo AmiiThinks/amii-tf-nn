@@ -40,7 +40,7 @@ Besides providing data to learn about TensorBoard, the example script also provi
 
 The *Scalar* page of TensorBoard uses the concepts of *name space*, *run*, and *variable* to organize its graphs.
 
-A *name space* is represented as an element of collapsable accordion widget that contains the graphs in the middle of the page. The ones labelled with a network name will contain the network parameter summary graphs. The ones labelled with a criterion like 'accuracy' or 'xentropy' contain model performance graphs over the course of training.
+A *name space* is represented as an element of collapsable accordion widget that contains the graphs in the middle of the page. The ones labelled with a network name will contain the network parameter summary graphs. The 'criteria' name space contains performance graphs on criteria, like 'accuracy' or 'xentropy', over the course of training.
 
 **Each graph represents a TensorFlow variable**. A significant point of confusion for me was that I thought variables represented lines on a graph, which is not true.
 
