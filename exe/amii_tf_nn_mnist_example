@@ -87,7 +87,6 @@ def main():
                 data.num_features(),
                 hidden,
                 transfer=tf.nn.relu,
-                scale=1.0,
                 name='layer_1',
                 weight_init=lambda *dims: (
                     tf.truncated_normal(
@@ -101,7 +100,6 @@ def main():
                 hidden,
                 data.num_outputs(),
                 transfer=tf.nn.softmax,
-                scale=1.0,
                 name='layer_2',
                 weight_init=lambda *dims: (
                     tf.truncated_normal(
@@ -126,7 +124,6 @@ def main():
                 data.num_features(),
                 data.num_outputs(),
                 transfer=tf.nn.softmax,
-                scale=1.0,
                 name='layer',
                 weight_init=lambda *dims: (
                     tf.truncated_normal(

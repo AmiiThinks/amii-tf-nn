@@ -11,7 +11,6 @@ class Layer(object):
             o,
             training_data_inputs=None,
             training_data_targets=None,
-            scale=1.0,
             transfer=tf.identity,
             name='layer_1',
             weight_init=None,
@@ -20,7 +19,6 @@ class Layer(object):
             self.name = name
             self.i = i
             self.o = o
-            self.scale = scale
             self.transfer = transfer
             self.weight_init = weight_init
             if weight_init is None:
@@ -69,30 +67,23 @@ class Layer(object):
                 with tf.name_scope('biases'):
                     biases = tf.Variable(self.bias_init(self.o))
                     tf_extra.variable_summaries(biases)
-                with tf.name_scope('scaled_Wx_plus_b'):
-                    preactivate_bs = tf.matmul(input_tensor, weights) + biases
-                    tf.summary.histogram(
-                        'pre_activations_before_scaling',
-                        preactivate_bs
-                    )
-                    preactivate = tf.constant(self.scale) * preactivate_bs
-                    tf.summary.histogram(
-                        'pre_activations',
-                        preactivate
-                    )
+                with tf.name_scope('Wx_plus_b'):
+                    preactivate = tf.matmul(input_tensor, weights) + biases
+                    tf.summary.histogram('pre_activations', preactivate)
+                activations = self.transfer(preactivate, name='activation')
+                tf.summary.histogram('activations', activations)
                 with tf.name_scope('output_normalization'):
                     # TODO Is this the correct way to do output normalization
                     # with a non-linear transfer?
-                    preactivate = (
-                        preactivate *
+                    activations = (
+                        activations *
                         tf.constant(self.output_scaling, dtype=tf.float32)
                     ) + tf.constant(self.output_offset, dtype=tf.float32)
                     tf.summary.histogram(
-                        'pre_activations_after_normalization',
-                        preactivate
+                        'activations_after_normalization',
+                        activations
                     )
-                activations = self.transfer(preactivate, name='activation')
-                tf.summary.histogram('activations', activations)
+
             return Layer(weights, biases, preactivate, activations)
 
     def __init__(self, W, b, z_hat, y_hat):
