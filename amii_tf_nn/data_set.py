@@ -18,6 +18,7 @@ class DataSet(object):
         assert(self.num_outputs() == v.num_outputs())
         self.data[k] = v
     def __missing__(self, k): raise(KeyError('No data named "{}".'.format(k)))
+    def __delitem__(self, k): del self.data[k]
     def keys(self): return self.data.keys()
     def values(self): return self.data.values()
     def items(self): return self.data.items()
