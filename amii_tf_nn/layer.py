@@ -23,23 +23,23 @@ class Layer(object):
         self.activation = activation
         self.tf_layer = tf_layer
         self.pre_activation = self.tf_layer.apply(input_node)
-        # TODO What name does self.pre_activation have?
         if self.activation is None:
             self.post_activation = self.pre_activation
         else:
+            tf.summary.histogram(
+                self.name() + '/' + 'pre_activation',
+                self.pre_activation
+            )
             self.post_activation = self.activation(
                 self.pre_activation,
                 name='post_activation'
             )
         tf_extra.monitor_layer(self.tf_layer, name=self.name())
-        if self.activation is not None:
-            tf.summary.histogram(
-                self.name() + '/' + 'pre_activation',
-                self.pre_activation
-            )
         tf.summary.histogram(
             self.name() + '/' + 'post_activation',
             self.post_activation
         )
 
     def name(self): return self.tf_layer.name
+    def kernel(self): return self.tf_layer.kernel
+    def bias(self): return self.tf_layer.bias

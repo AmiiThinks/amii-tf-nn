@@ -88,7 +88,7 @@ def main():
                 DenseLayer(
                     hidden,
                     use_bias=True,
-                    name='adln_layer_1'
+                    name='layer_1'
                 ),
                 activation=tf.nn.relu
             ),
@@ -96,7 +96,7 @@ def main():
                 DenseLayer(
                     data.num_outputs(),
                     use_bias=True,
-                    name='adln_layer_2'
+                    name='layer_2'
                 ),
                 activation=tf.nn.softmax
             )
@@ -114,7 +114,7 @@ def main():
                 DenseLayer(
                     data.num_outputs(),
                     use_bias=True,
-                    name='asln_layer'
+                    name='layer'
                 ),
                 activation=tf.nn.softmax
             )

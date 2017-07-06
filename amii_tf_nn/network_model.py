@@ -26,3 +26,10 @@ class NetworkModel(object):
 
     def pre_activation(self): return self.layers[-1].pre_activation
     def post_activation(self): return self.layers[-1].post_activation
+    def to_numpy(self, sess):
+        params = {}
+        for layer in self.layers:
+            k, b = sess.run([layer.kernel(), layer.bias()])
+            params[self.name + '/' + layer.name() + '/kernel'] = k
+            params[self.name + '/' + layer.name() + '/bias'] = b
+        return params
