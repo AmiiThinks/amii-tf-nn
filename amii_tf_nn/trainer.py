@@ -27,7 +27,9 @@ class Trainer(_Trainer):
     ):
         super(Trainer, self).__init__(data, **kwargs)
         self.sess = sess
-        self.batches_per_epoch = batches_per_epoch
+        self.batches_per_epoch = (
+            batches_per_epoch or data['training'].num_batches()
+        )
         self.estimators = estimators
 
     def _before_training(self):
@@ -58,12 +60,10 @@ class EvalTrainer(Trainer):
         experiment_path,
         *args,
         epochs_between_evaluations=1,
-        batches_per_eval=None,
         **kwargs
     ):
         super(EvalTrainer, self).__init__(*args, **kwargs)
         self.epochs_between_evaluations = epochs_between_evaluations
-        self.batches_per_eval = batches_per_eval
         self.criterion_summary_op = tf.summary.merge(
             tf.get_collection(key='summaries', scope='criteria')
         )
@@ -84,27 +84,23 @@ class EvalTrainer(Trainer):
                 self.eval(dist_name, i)
 
     def eval(self, dist_name, i):
+        num_training_steps = i * self.batches_per_epoch
         for e in self.monitored_estimators:
-            for batch, j in self.data[dist_name].each_batch(
-                self.batches_per_eval
-            ):
-                surrogate_eval = e.estimator.run_surrogate_eval(
-                    self.sess,
+            batch = self.data[dist_name].next_batch()
+            surrogate_eval = e.estimator.run_surrogate_eval(
+                self.sess,
+                batch.x,
+                batch.y
+            )
+            eval_vals = e.estimator.run_evals(self.sess, batch.x, batch.y)
+            summaries = self.sess.run(
+                [e.summary_op, self.criterion_summary_op],
+                feed_dict=e.estimator.to_feed_dict(
                     batch.x,
-                    batch.y
+                    batch.y,
+                    surrogate_eval=surrogate_eval,
+                    eval_vals=eval_vals
                 )
-                eval_vals = e.estimator.run_evals(self.sess, batch.x, batch.y)
-                summaries = self.sess.run(
-                    [e.summary_op, self.criterion_summary_op],
-                    feed_dict=e.estimator.to_feed_dict(
-                        batch.x,
-                        batch.y,
-                        surrogate_eval=surrogate_eval,
-                        eval_vals=eval_vals
-                    )
-                )
-                for s in summaries:
-                    e.writers[dist_name].add_summary(
-                        s,
-                        i * self.batches_per_epoch + j
-                    )
+            )
+            for s in summaries:
+                e.writers[dist_name].add_summary(s, num_training_steps)

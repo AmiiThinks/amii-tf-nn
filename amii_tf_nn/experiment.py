@@ -1,6 +1,7 @@
 from os import path, makedirs, getcwd
 from yaml import dump, load
-from tensorflow import logging
+import tensorflow as tf
+import numpy as np
 
 
 class Experiment(object):
@@ -14,11 +15,21 @@ class Experiment(object):
     def from_yml(cls, doc):
         return cls(**load(doc))
 
-    def __init__(self, name, root=getcwd(), seed=1, tag=None):
+    def __init__(
+        self,
+        name,
+        root=getcwd(),
+        seed=1,
+        tag=None,
+        log_level=tf.logging.ERROR
+    ):
         self.root = root
         self.name = name
         self.tag = str(seed) if tag is None else str(tag)
         self.seed = seed
+        tf.logging.set_verbosity(log_level)
+        np.random.seed(self.seed)
+        tf.set_random_seed(self.seed)
 
     def label(self): return self.name + '_' + self.tag
     def path(self): return path.join(self.root, self.label())
@@ -27,11 +38,11 @@ class Experiment(object):
         return path.exists(self.path()) and path.exists(self.config_file())
 
     def ensure_present(self):
-        logging.info('Saving experiment files to "{}".'.format(self.path()))
+        tf.logging.info('Saving experiment files to "{}".'.format(self.path()))
         if not path.exists(self.path()): makedirs(self.path())
         with open(self.config_file(), 'w') as f:
             dump(self.config(), stream=f, default_flow_style=False)
-        logging.info(
+        tf.logging.info(
             'Run `tensorboard --logdir {}` to visualize results.'.format(
                 self.path()
             )

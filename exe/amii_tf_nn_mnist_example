@@ -56,13 +56,12 @@ def batched_mnist_data(batch_size):
 
 
 def main():
-    tf.logging.set_verbosity(tf.logging.INFO)
-
     experiment = Experiment(
         'amii_tf_nn_mnist_example',
         root=os.path.join(os.getcwd(), 'tmp'),
         seed=1,
-        tag='1'
+        tag='1',
+        log_level=tf.logging.INFO
     )
     experiment.ensure_present()
 
@@ -136,8 +135,7 @@ def main():
             adln,
             asln,
             epochs_between_evaluations=5,
-            batches_per_epoch=2,
-            batches_per_eval=2
+            batches_per_epoch=2
         ).run()
 
 
