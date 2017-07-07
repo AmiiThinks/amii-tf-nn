@@ -1,5 +1,6 @@
 from os import path, makedirs, getcwd
 from yaml import dump, load
+from tensorflow import logging
 
 
 class Experiment(object):
@@ -26,9 +27,15 @@ class Experiment(object):
         return path.exists(self.path()) and path.exists(self.config_file())
 
     def ensure_present(self):
+        logging.info('Saving experiment files to "{}".'.format(self.path()))
         if not path.exists(self.path()): makedirs(self.path())
         with open(self.config_file(), 'w') as f:
             dump(self.config(), stream=f, default_flow_style=False)
+        logging.info(
+            'Run `tensorboard --logdir {}` to visualize results.'.format(
+                self.path()
+            )
+        )
         return self
 
     def write_config(self):

@@ -10,7 +10,7 @@ from amii_tf_nn.experiment import Experiment
 from amii_tf_nn.classifier import CrossEntropyClassifer
 from amii_tf_nn.network_model import NetworkModel
 from amii_tf_nn.layer import Layer
-from amii_tf_nn.trainer import Trainer
+from amii_tf_nn.trainer import EvalTrainer
 
 
 class AdamCrossEntropyClassifer(CrossEntropyClassifer):
@@ -56,6 +56,8 @@ def batched_mnist_data(batch_size):
 
 
 def main():
+    tf.logging.set_verbosity(tf.logging.INFO)
+
     experiment = Experiment(
         'amii_tf_nn_mnist_example',
         root=os.path.join(os.getcwd(), 'tmp'),
@@ -125,7 +127,18 @@ def main():
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        Trainer(sess, experiment, data, adln, asln, batches_per_epoch=2).run()
+        tf.summary.FileWriter(experiment.path(), sess.graph)
+
+        EvalTrainer(
+            experiment.path(),
+            sess,
+            data,
+            adln,
+            asln,
+            epochs_between_evaluations=5,
+            batches_per_epoch=2,
+            batches_per_eval=2
+        ).run()
 
 
 if __name__ == '__main__': main()
