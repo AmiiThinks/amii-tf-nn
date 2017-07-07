@@ -34,7 +34,7 @@ class Layer(object):
                 self.pre_activation,
                 name='post_activation'
             )
-        tf_extra.monitor_layer(self.tf_layer, name=self.name())
+        tf_extra.monitor_layer(self.tf_layer)
         tf.summary.histogram(
             self.name() + '/' + 'post_activation',
             self.post_activation
