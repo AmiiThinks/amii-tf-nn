@@ -3,8 +3,8 @@ from .monitored_estimator import MonitoredEstimator
 
 
 class _Trainer(object):
-    def __init__(self, data, num_epochs=100):
-        self.data = data
+    def __init__(self, training_data, num_epochs=100):
+        self.training_data = training_data
         self.num_epochs = num_epochs
 
     def run(self):
@@ -20,15 +20,15 @@ class Trainer(_Trainer):
     def __init__(
         self,
         sess,
-        data,
+        training_data,
         *estimators,
         batches_per_epoch=None,
         **kwargs
     ):
-        super(Trainer, self).__init__(data, **kwargs)
+        super(Trainer, self).__init__(training_data, **kwargs)
         self.sess = sess
         self.batches_per_epoch = (
-            batches_per_epoch or data['training'].num_batches()
+            batches_per_epoch or training_data.num_batches()
         )
         self.estimators = estimators
 
@@ -44,7 +44,7 @@ class Trainer(_Trainer):
     def _after_training_epoch(self, i): pass
 
     def train(self, i):
-        for batch, _ in self.data['training'].each_batch(
+        for batch, _ in self.training_data.each_batch(
             self.batches_per_epoch
         ):
             for e in self.estimators:
@@ -58,35 +58,41 @@ class EvalTrainer(Trainer):
     def __init__(
         self,
         experiment_path,
+        eval_data,
         *args,
         epochs_between_evaluations=1,
         **kwargs
     ):
         super(EvalTrainer, self).__init__(*args, **kwargs)
         self.epochs_between_evaluations = epochs_between_evaluations
+        self.eval_data = eval_data
         self.criterion_summary_op = tf.summary.merge(
             tf.get_collection(key='summaries', scope='criteria')
         )
         self.monitored_estimators = []
         for e in self.estimators:
             self.monitored_estimators.append(
-                MonitoredEstimator(e, experiment_path, *self.data.keys())
+                MonitoredEstimator(
+                    e,
+                    experiment_path,
+                    *self.eval_data.keys()
+                )
             )
 
     def _after_training(self):
-        for dist_name in self.data.keys():
+        for dist_name in self.eval_data.keys():
             self.eval(dist_name, self.num_epochs)
 
     def _before_training_epoch(self, i):
         tf.logging.info('Starting epoch {}'.format(i))
         if i % self.epochs_between_evaluations == 0:
-            for dist_name in self.data.keys():
+            for dist_name in self.eval_data.keys():
                 self.eval(dist_name, i)
 
     def eval(self, dist_name, i):
         num_training_steps = i * self.batches_per_epoch
         for e in self.monitored_estimators:
-            batch = self.data[dist_name].next_batch()
+            batch = self.eval_data[dist_name].next_batch()
             surrogate_eval = e.estimator.run_surrogate_eval(
                 self.sess,
                 batch.x,

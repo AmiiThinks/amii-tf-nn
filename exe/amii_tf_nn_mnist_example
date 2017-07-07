@@ -52,7 +52,7 @@ def batched_mnist_data(batch_size):
     mnist = mnist_data()
     for k in mnist.keys():
         mnist[k] = BatchedData.from_data(batch_size, mnist[k])
-    return mnist
+    return mnist['training'], mnist
 
 
 def main():
@@ -65,17 +65,17 @@ def main():
     )
     experiment.ensure_present()
 
-    data = batched_mnist_data(100)
+    training_data, eval_data = batched_mnist_data(100)
 
     input_node = tf.placeholder(
         tf.float32,
-        shape=(None, data.num_features()),
+        shape=(None, training_data.num_features()),
         name="input"
     )
 
     target_node = tf.placeholder(
         tf.float32,
-        shape=(None, data.num_outputs()),
+        shape=(None, training_data.num_outputs()),
         name='target'
     )
 
@@ -95,7 +95,7 @@ def main():
             ),
             Layer.factory(
                 DenseLayer(
-                    data.num_outputs(),
+                    training_data.num_outputs(),
                     use_bias=True,
                     name='layer_2'
                 ),
@@ -113,7 +113,7 @@ def main():
             input_node,
             Layer.factory(
                 DenseLayer(
-                    data.num_outputs(),
+                    training_data.num_outputs(),
                     use_bias=True,
                     name='layer'
                 ),
@@ -130,8 +130,9 @@ def main():
 
         EvalTrainer(
             experiment.path(),
+            eval_data,
             sess,
-            data,
+            training_data,
             adln,
             asln,
             epochs_between_evaluations=5,
