@@ -30,7 +30,7 @@ Checkout the source and run `make install`. This will use `pip` to install the s
 
 The example should run in just a minute or two, even on a CPU, because the number and size of the epochs are small. All data and results will be written to a `tmp` directory in your working directory. If you point TensorBoard at `tmp/amii_tf_nn_mnist_example_1` (i.e. running `tensorboard --logdir tmp/amii_tf_nn_mnist_example_1`), you can see the performance of your models as they trained, as well as network parameter summary statistics and the computational graph that was run.
 
-The `tensorboard` command will start an HTML server on port `6006` and output a link for your browser. Following this link will show you the TensorBoard interface. The *Scalars* page shows performance graphs and network parameter statistics. The *Graphs* page shows the computational graph, *Distributions* and *Histograms* provide more detailed network parameter and activation analysis.
+The `tensorboard` command will start an HTML server on port `6006` and output a link for your browser. Following this link will show you the TensorBoard interface. The *Scalars* page shows performance graphs, the *Graphs* page shows the computational graph, and the *Distributions* and *Histograms* pages show network parameter and activation statistics.
 
 Besides providing data to learn about TensorBoard, the example script also provides guidance in how to write your own experiments.
 
@@ -38,9 +38,9 @@ Besides providing data to learn about TensorBoard, the example script also provi
 
 ### Background
 
-The *Scalar* page of TensorBoard uses the concepts of *name space*, *run*, and *variable* to organize its graphs.
+The *Scalars* page of TensorBoard uses the concepts of *name space*, *run*, and *variable* to organize its graphs.
 
-A *name space* is represented as an element of collapsable accordion widget that contains the graphs in the middle of the page. The ones labelled with a network name will contain the network parameter summary graphs. The 'criteria' name space contains performance graphs on criteria, like 'accuracy' or 'xentropy', over the course of training.
+A *name space* is represented as an element of collapsable accordion widget that contains the graphs in the middle of the page. The 'criteria' name space contains performance graphs on criteria, like 'accuracy' or 'xentropy', over the course of training.
 
 **Each graph represents a TensorFlow variable**. A significant point of confusion for me was that I thought variables represented lines on a graph, which is not true.
 
