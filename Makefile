@@ -22,6 +22,9 @@ install: requirements.txt
 mnist:
 	$(PYTHON) exe/amii_tf_nn_mnist_example
 
+print-%:
+	@echo $*=$($*)
+
 clean:
 	-find . -name "*.pyc" -delete
 	-find . -name "__pycache__" -delete

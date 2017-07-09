@@ -16,6 +16,8 @@ This library aims to be a lightweight wrapper to TensorFlow that facilitates neu
 
 Checkout the source and run `make install`. This will use `pip` to install the source as a Python library.
 
+Unfortunately, TensorFlow is actually two separate libraries, the CPU-based `tensorflow` library and the GPU-based `tensorflow-gpu` library. Normally this wouldn't be a problem, except that the libraries are actually incompatible with each other. So there can only be one. You'll need to install the particular version for your system yourself. There is a comment in `setup.py` reminding those who look there that it is an implicit dependency, but I don't know how to enforce this programmatically.
+
 
 ## Usage
 

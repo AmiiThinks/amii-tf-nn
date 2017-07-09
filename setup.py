@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-import warnings
+
 
 setup(
     name='amii-tf-nn',
@@ -10,7 +10,7 @@ setup(
         'future == 0.15.2',
         'setuptools >= 20.2.2',
         'pyyaml == 3.12',
-        'tensorflow == 1.2'
+        # tensorflow or tensorflow-gpu
     ],
     tests_require=['pytest', 'pytest-cov'],
     setup_requires=['pytest-runner'],
