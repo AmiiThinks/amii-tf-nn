@@ -93,18 +93,12 @@ class EvalTrainer(Trainer):
         num_training_steps = i * self.batches_per_epoch
         for e in self.monitored_estimators:
             batch = self.eval_data[dist_name].next_batch()
-            surrogate_eval = e.estimator.run_surrogate_eval(
-                self.sess,
-                batch.x,
-                batch.y
-            )
             eval_vals = e.estimator.run_evals(self.sess, batch.x, batch.y)
             summaries = self.sess.run(
                 [e.summary_op, self.criterion_summary_op],
                 feed_dict=e.estimator.to_feed_dict(
                     batch.x,
                     batch.y,
-                    surrogate_eval=surrogate_eval,
                     eval_vals=eval_vals
                 )
             )

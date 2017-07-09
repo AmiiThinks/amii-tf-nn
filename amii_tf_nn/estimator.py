@@ -24,18 +24,12 @@ class Estimator(object):
             surrogate_eval_name,
             surrogate_eval_node
         )
-        self.eval_criteria = []
-        for name in eval_nodes.keys():
-            self.eval_criteria.append(Criterion(name, eval_nodes[name]))
+        self.eval_criteria = [self.surrogate_criterion]
+        if eval_nodes is not None:
+            for name in eval_nodes.keys():
+                self.eval_criteria.append(Criterion(name, eval_nodes[name]))
 
-    def run_surrogate_eval(self, sess, x, y):
-        return self.surrogate_criterion.run(
-            sess,
-            feed_dict={
-                self.model.input_node: x,
-                self.target_node: y
-            }
-        )
+    def _create_evals(self): return None
 
     def run_evals(self, sess, x, y):
         return [
@@ -52,15 +46,12 @@ class Estimator(object):
         self,
         x,
         y,
-        surrogate_eval=None,
         eval_vals=None
     ):
         d = {
             self.model.input_node: x,
             self.target_node: y
         }
-        if not(surrogate_eval is None):
-            d[self.surrogate_criterion.variable] = surrogate_eval
         if not(eval_vals is None):
             for i in range(len(eval_vals)):
                 d[self.eval_criteria[i].variable] = eval_vals[i]
