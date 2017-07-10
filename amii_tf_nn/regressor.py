@@ -34,9 +34,10 @@ class MaeRegressor(Estimator):
 
 class UnnormalizedEntropyLossRegressor(Estimator):
     def _create_surrogate_eval(self):
-        with tf.name_scope('unnormalized_entropy_loss'):
+        with tf.name_scope('uel'):
             uel = tf.reduce_mean(
-                self.model.post_activation() -
-                (self.target_node * tf.log(self.model.post_activation()))
+                self.model.post_activation() - (
+                    self.target_node * tf.log(self.model.post_activation())
+                )
             )
-        return uel, 'unnormalized_entropy_loss'
+        return uel, 'uel'

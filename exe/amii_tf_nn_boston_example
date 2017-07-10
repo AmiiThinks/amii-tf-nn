@@ -13,19 +13,46 @@ from amii_tf_nn.layer import Layer
 from amii_tf_nn.experiment import Experiment
 from amii_tf_nn.trainer import EvalTrainer
 from sklearn import datasets
-from amii_tf_nn.regressor import UnnormalizedEntropyLossRegressor
+from amii_tf_nn.regressor import UnnormalizedEntropyLossRegressor, \
+    MaeRegressor, MseRegressor
 from amii_tf_nn.optimizer import AdamOptimizerMixin
+
+
+def _create_evals(self):
+    nonnegative_outputs = tf.maximum(0.0, self.model.post_activation())
+    with tf.name_scope('mae_plus'):
+        mae = tf.reduce_mean(
+            tf.abs(self.target_node - nonnegative_outputs)
+        )
+    with tf.name_scope('mse_plus'):
+        mse = tf.reduce_mean(
+            tf.square(self.target_node - nonnegative_outputs) / 2.0
+        )
+    with tf.name_scope('uel_plus'):
+        uel = tf.reduce_mean(
+            (
+                self.target_node * (
+                    tf.log(self.target_node / nonnegative_outputs)
+                ) +
+                nonnegative_outputs -
+                self.target_node
+            )
+        )
+    return {'mae_plus': mae, 'mse_plus': mse, 'uel_plus': uel}
 
 
 class AdamUnnormalizedEntropyLossRegressor(
     AdamOptimizerMixin, UnnormalizedEntropyLossRegressor
 ):
-    def _create_evals(self):
-        with tf.name_scope('mae'):
-            mae = tf.reduce_mean(
-                tf.abs(self.target_node - self.model.post_activation())
-            )
-        return {'mae': mae}
+    def _create_evals(self): return _create_evals(self)
+
+
+class AdamMaeRegressor(AdamOptimizerMixin, MaeRegressor):
+    def _create_evals(self): return _create_evals(self)
+
+
+class AdamMseRegressor(AdamOptimizerMixin, MseRegressor):
+    def _create_evals(self): return _create_evals(self)
 
 
 def _standardized(x):
@@ -92,10 +119,8 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
         name='target'
     )
 
-    exp_activation = tf.exp
-
-    asln = AdamUnnormalizedEntropyLossRegressor(
-        'Adam_sln_lr0.1',
+    uesln = AdamUnnormalizedEntropyLossRegressor(
+        'UE_1',
         NetworkModel.factory(
             '1lff',
             input_node,
@@ -106,16 +131,15 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
                     name='layer',
                     kernel_initializer=tf.zeros_initializer
                 ),
-                activation=exp_activation
+                activation=tf.exp
             )
         ),
-        target_node,
-        learning_rate=0.1
+        target_node
     )
 
     hidden = 20
-    adln = AdamUnnormalizedEntropyLossRegressor(
-        'Adam_dln_orth_lr0.1',
+    uedln = AdamUnnormalizedEntropyLossRegressor(
+        'UE_2_orth',
         NetworkModel.factory(
             '2lff',
             input_node,
@@ -135,16 +159,105 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
                     name='layer_2',
                     kernel_initializer=tf.orthogonal_initializer
                 ),
-                activation=exp_activation
+                activation=tf.exp
             )
         ),
-        target_node,
-        learning_rate=0.1
+        target_node
+    )
+
+    maesln = AdamMaeRegressor(
+        'MAE_1',
+        NetworkModel.factory(
+            '1lff',
+            input_node,
+            Layer.factory(
+                DenseLayer(
+                    training_data.num_outputs(),
+                    use_bias=True,
+                    name='layer',
+                    kernel_initializer=tf.zeros_initializer
+                )
+            )
+        ),
+        target_node
+    )
+
+    maedln = AdamMaeRegressor(
+        'MAE_2_orth',
+        NetworkModel.factory(
+            '2lff',
+            input_node,
+            Layer.factory(
+                DenseLayer(
+                    hidden,
+                    use_bias=True,
+                    name='layer_1',
+                    kernel_initializer=tf.orthogonal_initializer
+                ),
+                activation=tf.nn.elu
+            ),
+            Layer.factory(
+                DenseLayer(
+                    training_data.num_outputs(),
+                    use_bias=True,
+                    name='layer_2',
+                    kernel_initializer=tf.orthogonal_initializer
+                )
+            )
+        ),
+        target_node
+    )
+
+    msesln = AdamMseRegressor(
+        'MSE_1',
+        NetworkModel.factory(
+            '1lff',
+            input_node,
+            Layer.factory(
+                DenseLayer(
+                    training_data.num_outputs(),
+                    use_bias=True,
+                    name='layer',
+                    kernel_initializer=tf.zeros_initializer
+                )
+            )
+        ),
+        target_node
+    )
+
+    msedln = AdamMseRegressor(
+        'MSE_2_orth',
+        NetworkModel.factory(
+            '2lff',
+            input_node,
+            Layer.factory(
+                DenseLayer(
+                    hidden,
+                    use_bias=True,
+                    name='layer_1',
+                    kernel_initializer=tf.orthogonal_initializer
+                ),
+                activation=tf.nn.elu
+            ),
+            Layer.factory(
+                DenseLayer(
+                    training_data.num_outputs(),
+                    use_bias=True,
+                    name='layer_2',
+                    kernel_initializer=tf.orthogonal_initializer
+                )
+            )
+        ),
+        target_node
     )
 
     models = [
-        asln,
-        adln
+        uesln,
+        uedln,
+        maesln,
+        maedln,
+        msesln,
+        msedln
     ]
 
     with tf.Session() as sess:
