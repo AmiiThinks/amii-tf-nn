@@ -9,7 +9,7 @@ class MseRegressor(Estimator):
                 self.target_node,
                 self.model.post_activation()
             )
-        return {'mse': mse}
+        return mse, 'mse'
 
 
 class HuberRegressor(Estimator):
@@ -19,7 +19,7 @@ class HuberRegressor(Estimator):
                 self.target_node,
                 self.model.post_activation()
             )
-        return {'huber': huber}
+        return huber, 'huber'
 
 
 class MaeRegressor(Estimator):
@@ -29,7 +29,7 @@ class MaeRegressor(Estimator):
                 self.target_node,
                 self.model.post_activation()
             )
-        return {'mae': mae}
+        return mae, 'mae'
 
 
 class UnnormalizedEntropyLossRegressor(Estimator):
@@ -39,4 +39,4 @@ class UnnormalizedEntropyLossRegressor(Estimator):
                 self.model.post_activation() -
                 (self.target_node * tf.log(self.model.post_activation()))
             )
-        return {'unnormalized_entropy_loss': uel}
+        return uel, 'unnormalized_entropy_loss'

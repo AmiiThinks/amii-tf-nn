@@ -1,0 +1,187 @@
+#!/usr/bin/env python
+
+import fire
+import os
+import math
+import numpy as np
+import tensorflow as tf
+from tensorflow.python.layers.core import Dense as DenseLayer
+from amii_tf_nn.data import BatchedData
+from amii_tf_nn.data_set import DataSet
+from amii_tf_nn.network_model import NetworkModel
+from amii_tf_nn.layer import Layer
+from amii_tf_nn.experiment import Experiment
+from amii_tf_nn.trainer import EvalTrainer
+from sklearn import datasets
+from amii_tf_nn.regressor import UnnormalizedEntropyLossRegressor
+from amii_tf_nn.optimizer import AdamOptimizerMixin
+
+
+class AdamUnnormalizedEntropyLossRegressor(
+    AdamOptimizerMixin, UnnormalizedEntropyLossRegressor
+):
+    def _create_evals(self):
+        with tf.name_scope('mae'):
+            mae = tf.reduce_mean(
+                tf.abs(self.target_node - self.model.post_activation())
+            )
+        return {'mae': mae}
+
+
+def _standardized(x):
+    input_scaling = x.std(0)
+    input_scaling[input_scaling == 0] = 1.0
+    return (x - x.mean(0)) / input_scaling
+
+
+def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
+    '''
+    Run an experiment on the Boston house-prices data.
+
+    Args:
+        seed (int): The random seed and experiment tag. Defaults to 1.
+        batch-size (int): The size of the training batch. Defaults to 30.
+        test_proportion (float): The proportion of points to use as testing data. Defaults to 0.1.
+        num_epochs (int): The number of epochs to run. Defaults to 500.
+    '''
+    experiment = Experiment(
+        'boston_example',
+        root=os.path.join(os.getcwd(), 'tmp'),
+        seed=seed,
+        log_level=tf.logging.INFO
+    )
+    experiment.ensure_present()
+
+    boston = datasets.load_boston()
+    raw_x = boston.data
+    raw_y = boston.target
+    raw_y = np.array([[y] for y in raw_y])
+
+    np.random.shuffle(raw_x)
+    np.random.shuffle(raw_y)
+
+    num_test_instances = math.floor(raw_x.shape[0] * test_proportion)
+    num_training_instances = raw_x.shape[0] - num_test_instances
+
+    raw_x_train = raw_x[:num_training_instances]
+    raw_x_test = raw_x[num_training_instances:]
+
+    raw_y_train = raw_y[:num_training_instances]
+    raw_y_test = raw_y[num_training_instances:]
+
+    x_train = _standardized(raw_x_train)
+    x_test = _standardized(raw_x_test)
+    y_train = raw_y_train
+    y_test = raw_y_test
+
+    training_data = BatchedData(batch_size, x_train, y_train)
+    eval_data = DataSet(
+        training=BatchedData(x_train.shape[0], x_train, y_train),
+        testing=BatchedData(x_test.shape[0], x_test, y_test),
+    )
+
+    input_node = tf.placeholder(
+        tf.float32,
+        shape=(None, training_data.num_features()),
+        name="input"
+    )
+
+    target_node = tf.placeholder(
+        tf.float32,
+        shape=(None, training_data.num_outputs()),
+        name='target'
+    )
+
+    exp_activation = tf.exp
+
+    asln = AdamUnnormalizedEntropyLossRegressor(
+        'Adam_sln_lr0.1',
+        NetworkModel.factory(
+            '1lff',
+            input_node,
+            Layer.factory(
+                DenseLayer(
+                    training_data.num_outputs(),
+                    use_bias=True,
+                    name='layer',
+                    kernel_initializer=tf.zeros_initializer
+                ),
+                activation=exp_activation
+            )
+        ),
+        target_node,
+        learning_rate=0.1
+    )
+
+    hidden = 20
+    adln = AdamUnnormalizedEntropyLossRegressor(
+        'Adam_dln_orth_lr0.1',
+        NetworkModel.factory(
+            '2lff',
+            input_node,
+            Layer.factory(
+                DenseLayer(
+                    hidden,
+                    use_bias=True,
+                    name='layer_1',
+                    kernel_initializer=tf.orthogonal_initializer
+                ),
+                activation=tf.nn.elu
+            ),
+            Layer.factory(
+                DenseLayer(
+                    training_data.num_outputs(),
+                    use_bias=True,
+                    name='layer_2',
+                    kernel_initializer=tf.orthogonal_initializer
+                ),
+                activation=exp_activation
+            )
+        ),
+        target_node,
+        learning_rate=0.1
+    )
+
+    models = [
+        asln,
+        adln
+    ]
+
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        tf.summary.FileWriter(experiment.path(), sess.graph)
+
+        saver = tf.train.Saver()
+        checkpoint_path = os.path.join(experiment.path(), "graph.0.ckpt")
+
+        tf.logging.info(
+            'Saving initial checkpoint in "{}".'.format(checkpoint_path)
+        )
+        saver.save(sess, checkpoint_path)
+
+        EvalTrainer(
+            experiment.path(),
+            eval_data,
+            sess,
+            training_data,
+            *models,
+            num_epochs=num_epochs,
+            epochs_between_evaluations=(
+                num_epochs * training_data.num_batches() / 1000
+            )
+        ).run()
+
+        checkpoint_path = os.path.join(
+            experiment.path(),
+            "graph.{}.ckpt".format(
+                num_epochs * training_data.num_batches()
+            )
+        )
+        tf.logging.info(
+            'Saving final checkpoint in "{}".'.format(checkpoint_path)
+        )
+        saver.save(sess, checkpoint_path)
+
+
+if __name__ == '__main__':
+    fire.Fire(run)

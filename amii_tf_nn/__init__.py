@@ -11,3 +11,5 @@ from .network_model import *
 from .tf_extra import *
 from .trainer import *
 from .projection import *
+from .regressor import *
+from .optimizer import *
