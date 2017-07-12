@@ -31,6 +31,11 @@ class Data(object):
             n = 1
         return n
 
+    def shuffle(self):
+        np.random.shuffle(self.x)
+        np.random.shuffle(self.y)
+        return self
+
 
 class DataStream(Data):
     @classmethod
@@ -73,3 +78,9 @@ class BatchedData(DataStream):
 
     def num_batches(self):
         return ceil(len(self) / self.batch_size)
+
+
+class ShuffledBatchedData(BatchedData):
+    def each_batch(self, *args, **kwargs):
+        self.shuffle()
+        return super(ShuffledBatchedData, self).each_batch(*args, **kwargs)
