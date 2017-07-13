@@ -55,12 +55,6 @@ class AdamMseRegressor(AdamOptimizerMixin, MseRegressor):
     def _create_evals(self): return _create_evals(self)
 
 
-def _standardized(x):
-    input_scaling = x.std(0)
-    input_scaling[input_scaling == 0] = 1.0
-    return (x - x.mean(0)) / input_scaling
-
-
 def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
     '''
     Run an experiment on the Boston house-prices data.
@@ -96,8 +90,8 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
     raw_y_train = raw_data.y[:num_training_instances]
     raw_y_test = raw_data.y[num_training_instances:]
 
-    x_train = _standardized(raw_x_train)
-    x_test = _standardized(raw_x_test)
+    x_train = raw_x_train
+    x_test = raw_x_test
     y_train = raw_y_train
     y_test = raw_y_test
 
