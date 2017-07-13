@@ -51,7 +51,7 @@ def mnist_data():
 def batched_mnist_data(batch_size):
     mnist = mnist_data()
     for k in mnist.keys():
-        mnist[k] = BatchedData.from_data(batch_size, mnist[k])
+        mnist[k] = BatchedData.from_data(mnist[k], batch_size=batch_size)
     return mnist['training'], mnist
 
 

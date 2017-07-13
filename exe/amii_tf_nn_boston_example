@@ -6,7 +6,7 @@ import math
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.layers.core import Dense as DenseLayer
-from amii_tf_nn.data import BatchedData, ShuffledBatchedData
+from amii_tf_nn.data import Data, BatchedData, ShuffledBatchedData
 from amii_tf_nn.data_set import DataSet
 from amii_tf_nn.network_model import NetworkModel
 from amii_tf_nn.layer import Layer
@@ -84,27 +84,27 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
     raw_y = boston.target
     raw_y = np.array([[y] for y in raw_y])
 
-    np.random.shuffle(raw_x)
-    np.random.shuffle(raw_y)
+    raw_data = Data(raw_x, raw_y)
+    raw_data.shuffle()
 
-    num_test_instances = math.floor(raw_x.shape[0] * test_proportion)
-    num_training_instances = raw_x.shape[0] - num_test_instances
+    num_test_instances = math.floor(len(raw_data) * test_proportion)
+    num_training_instances = len(raw_data) - num_test_instances
 
-    raw_x_train = raw_x[:num_training_instances]
-    raw_x_test = raw_x[num_training_instances:]
+    raw_x_train = raw_data.x[:num_training_instances]
+    raw_x_test = raw_data.x[num_training_instances:]
 
-    raw_y_train = raw_y[:num_training_instances]
-    raw_y_test = raw_y[num_training_instances:]
+    raw_y_train = raw_data.y[:num_training_instances]
+    raw_y_test = raw_data.y[num_training_instances:]
 
     x_train = _standardized(raw_x_train)
     x_test = _standardized(raw_x_test)
     y_train = raw_y_train
     y_test = raw_y_test
 
-    training_data = ShuffledBatchedData(batch_size, x_train, y_train)
+    training_data = ShuffledBatchedData(x_train, y_train, batch_size=batch_size)
     eval_data = DataSet(
-        training=BatchedData(x_train.shape[0], x_train, y_train),
-        testing=BatchedData(x_test.shape[0], x_test, y_test),
+        training=BatchedData(x_train, y_train),
+        testing=BatchedData(x_test, y_test),
     )
 
     input_node = tf.placeholder(

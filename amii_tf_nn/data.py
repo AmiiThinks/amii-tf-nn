@@ -32,7 +32,9 @@ class Data(object):
         return n
 
     def shuffle(self):
+        rng_state = np.random.get_state()
         np.random.shuffle(self.x)
+        np.random.set_state(rng_state)
         np.random.shuffle(self.y)
         return self
 
@@ -61,12 +63,15 @@ class DataStream(Data):
 
 class BatchedData(DataStream):
     @classmethod
-    def from_data(cls, batch_size, data):
-        return cls(batch_size, data.x, data.y)
+    def from_data(cls, data, batch_size=None, **kwargs):
+        return cls(data.x, data.y, batch_size=batch_size, **kwargs)
 
-    def __init__(self, batch_size, *args, **kwargs):
+    def __init__(self, *args, batch_size=None, **kwargs):
         super(BatchedData, self).__init__(*args, **kwargs)
-        self.batch_size = batch_size
+        if batch_size is None:
+            self.batch_size = len(self)
+        else:
+            self.batch_size = max(1, min(batch_size, len(self)))
 
     def each_batch(self, num_batches=None):
         if num_batches is None: num_batches = self.num_batches()
