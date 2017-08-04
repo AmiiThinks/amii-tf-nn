@@ -2,11 +2,10 @@ import tensorflow as tf
 from .criterion import Criterion
 
 
-class Estimator(object):
+class AbstractEstimator(object):
     def __init__(
         self,
         name,
-        model_factory,
         target_node,
         **optimization_params
     ):
@@ -15,7 +14,7 @@ class Estimator(object):
         self.optimization_params = optimization_params
         with tf.name_scope(self.name):
             self.name_scope = tf.contrib.framework.get_name_scope()
-            self.model = model_factory()
+            self._create_model()
             surrogate_eval_node, surrogate_eval_name =\
                 self._create_surrogate_eval()
             self.optimizer = self._create_optimizer(surrogate_eval_node)
@@ -36,7 +35,7 @@ class Estimator(object):
             criterion.run(
                 sess,
                 feed_dict={
-                    self.model.input_node: x,
+                    self.input_node(): x,
                     self.target_node: y
                 }
             ) for criterion in self.eval_criteria
@@ -49,10 +48,24 @@ class Estimator(object):
         eval_vals=None
     ):
         d = {
-            self.model.input_node: x,
+            self.input_node(): x,
             self.target_node: y
         }
         if not(eval_vals is None):
             for i in range(len(eval_vals)):
                 d[self.eval_criteria[i].variable] = eval_vals[i]
         return d
+
+
+class Estimator(AbstractEstimator):
+    def __init__(
+        self,
+        model_factory,
+        *args,
+        **kwargs
+    ):
+        self.model_factory = model_factory
+        super(Estimator, self).__init__(*args, **kwargs)
+
+    def _create_model(self): self.model = self.model_factory()
+    def input_node(self): return self.model.input_node

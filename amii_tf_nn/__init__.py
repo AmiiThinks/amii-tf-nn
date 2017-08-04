@@ -13,3 +13,4 @@ from .trainer import *
 from .projection import *
 from .regressor import *
 from .optimizer import *
+from .multi_estimator import *

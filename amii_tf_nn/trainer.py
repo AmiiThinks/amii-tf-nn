@@ -2,9 +2,8 @@ import tensorflow as tf
 from .monitored_estimator import MonitoredEstimator
 
 
-class _Trainer(object):
-    def __init__(self, training_data, num_epochs=100):
-        self.training_data = training_data
+class AbstractTrainer(object):
+    def __init__(self, num_epochs=100):
         self.num_epochs = num_epochs
 
     def run(self):
@@ -16,7 +15,7 @@ class _Trainer(object):
         self._after_training()
 
 
-class Trainer(_Trainer):
+class Trainer(AbstractTrainer):
     def __init__(
         self,
         sess,
@@ -25,7 +24,8 @@ class Trainer(_Trainer):
         batches_per_epoch=None,
         **kwargs
     ):
-        super(Trainer, self).__init__(training_data, **kwargs)
+        super(Trainer, self).__init__(**kwargs)
+        self.training_data = training_data
         self.sess = sess
         self.batches_per_epoch = (
             batches_per_epoch or training_data.num_batches()

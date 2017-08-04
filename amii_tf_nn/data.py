@@ -5,6 +5,7 @@ from math import ceil
 
 class Data(object):
     def __init__(self, x, y):
+        self.data_has_been_copied = False
         self.x = x
         self.y = y
         assert(self.x.shape[0] == self.y.shape[0])
@@ -16,6 +17,11 @@ class Data(object):
             np.concatenate((self.x, other.x)),
             np.concatenate((self.y, other.y))
         )
+    def __str__(self):
+        s = ''
+        for i in range(len(self)):
+            s += '{} | {}'.format(self.x[i, :], self.y[i, :])
+        return s
 
     def num_features(self):
         try:
@@ -32,6 +38,10 @@ class Data(object):
         return n
 
     def shuffle(self):
+        if not self.data_has_been_copied:
+            self.x = self.x.copy()
+            self.y = self.y.copy()
+            self.data_has_been_copied = True
         rng_state = np.random.get_state()
         np.random.shuffle(self.x)
         np.random.set_state(rng_state)

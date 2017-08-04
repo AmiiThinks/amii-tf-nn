@@ -1,0 +1,431 @@
+#!/usr/bin/env python
+
+import fire
+import os
+import math
+import numpy as np
+import tensorflow as tf
+from tensorflow.python.layers.core import Dense as DenseLayer
+from amii_tf_nn.data import Data, BatchedData, ShuffledBatchedData
+from amii_tf_nn.data_set import DataSet
+from amii_tf_nn.network_model import NetworkModel
+from amii_tf_nn.layer import Layer
+from amii_tf_nn.experiment import Experiment
+from amii_tf_nn.trainer import EvalTrainer
+from sklearn import datasets
+from amii_tf_nn.multi_estimator import MultiEstimator
+from amii_tf_nn.regressor import UnnormalizedEntropyLossRegressor, \
+    HuberRegressor
+from amii_tf_nn.optimizer import AdamOptimizerMixin
+from amii_tf_nn.criterion import Criterion
+
+
+class AdamUnnormalizedEntropyLossRegressor(
+    AdamOptimizerMixin, UnnormalizedEntropyLossRegressor
+): pass
+
+
+class AdamHuberRegressor(AdamOptimizerMixin, HuberRegressor): pass
+
+
+class UnnormalizedEntropyLossHuberMultiRegressor(MultiEstimator):
+    def _create_surrogate_eval(self):
+        uel_target_node, huber_target_node = self._partitioned_targets()
+        with tf.name_scope('uel_component'):
+            uel = tf.reduce_mean(
+                self.output_models[0].post_activation() - (
+                    uel_target_node * tf.log(
+                        self.output_models[0].post_activation()
+                    )
+                )
+            )
+        with tf.name_scope('huber_component'):
+            huber = tf.losses.huber_loss(
+                huber_target_node,
+                self.output_models[1].post_activation()
+            )
+        return (
+            (
+                self.output_model_weights[0] * uel +
+                self.output_model_weights[1] * huber
+            ),
+            'uel_plus_huber'
+        )
+
+    def _create_evals(self):
+        uel_target_node, huber_target_node = self._partitioned_targets()
+        with tf.name_scope('uel'):
+            uel = tf.reduce_mean(
+                self.output_models[0].post_activation() - (
+                    uel_target_node *
+                    tf.log(self.output_models[0].post_activation())
+                )
+            )
+        with tf.name_scope('huber'):
+            huber = tf.losses.huber_loss(
+                huber_target_node,
+                self.output_models[1].post_activation()
+            )
+        return {'uel': uel, 'huber': huber}
+
+
+class AdamUnnormalizedEntropyLossHuberMultiRegressor(
+    AdamOptimizerMixin,
+    UnnormalizedEntropyLossHuberMultiRegressor
+): pass
+
+
+class HuberMultiRegressor(MultiEstimator):
+    def _create_surrogate_eval(self):
+        huber_target_node = self._partitioned_targets()[0]
+        with tf.name_scope('huber_component'):
+            huber = tf.losses.huber_loss(
+                huber_target_node,
+                self.output_models[0].post_activation()
+            )
+        return (
+            (
+                self.output_model_weights[0] * huber
+            ),
+            'uel_plus_huber'
+        )
+
+    def _create_evals(self):
+        huber_target_node = self._partitioned_targets()[0]
+        with tf.name_scope('huber'):
+            huber = tf.losses.huber_loss(
+                huber_target_node,
+                self.output_models[0].post_activation()
+            )
+        return {'huber': huber}
+
+
+class AdamHuberMultiRegressor(
+    AdamOptimizerMixin,
+    HuberMultiRegressor
+): pass
+
+
+def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
+    '''
+    Run an experiment comparing a pair of nets that share an internal
+    representation with a pair where each have their own.
+
+    Evaluates the networks on the Boston house-prices data. One of the network
+    pairs is trained to predict house prices as usual and the other is
+    trained to predict the input features.
+
+    Args:
+        seed (int): The random seed and experiment tag. Defaults to 1.
+        batch-size (int): The size of the training batch. Defaults to 30.
+        test_proportion (float): The proportion of points to use as testing data. Defaults to 0.1.
+        num_epochs (int): The number of epochs to run. Defaults to 500.
+    '''
+    experiment = Experiment(
+        'shared_basis_example',
+        root=os.path.join(os.getcwd(), 'tmp'),
+        seed=seed,
+        log_level=tf.logging.INFO
+    )
+    experiment.ensure_present()
+
+    boston = datasets.load_boston()
+    raw_x = boston.data
+    raw_y = np.array([[y] for y in boston.target])
+
+    raw_data = Data(raw_x, raw_y)
+    raw_data.shuffle()
+
+    num_test_instances = math.floor(len(raw_data) * test_proportion)
+    num_training_instances = len(raw_data) - num_test_instances
+
+    raw_x_train = raw_data.x[:num_training_instances]
+    raw_x_test = raw_data.x[num_training_instances:]
+
+    raw_y_train = raw_data.y[:num_training_instances]
+    raw_y_test = raw_data.y[num_training_instances:]
+
+    x_train = raw_x_train
+    x_test = raw_x_test
+    y_train = raw_y_train
+    y_test = raw_y_test
+
+    price_training_data = ShuffledBatchedData(
+        x_train,
+        y_train,
+        batch_size=batch_size
+    )
+    price_eval_data = DataSet(
+        training=BatchedData(x_train, y_train),
+        testing=BatchedData(x_test, y_test),
+    )
+
+    input_node = tf.placeholder(
+        tf.float32,
+        shape=(None, x_train.shape[1]),
+        name="input"
+    )
+
+    price_target_node = tf.placeholder(
+        tf.float32,
+        shape=(None, price_training_data.num_outputs()),
+        name='price_target'
+    )
+
+    global first_layer_initial_values
+    first_layer_initial_values = None
+    def first_layer_initializer(*args, **kwargs):
+        global first_layer_initial_values
+        if first_layer_initial_values is None:
+            first_layer_initial_values = tf.orthogonal_initializer(
+                gain=0.01
+            )(*args, **kwargs)
+        return first_layer_initial_values
+
+    global ue_second_layer_initial_values
+    ue_second_layer_initial_values = None
+    def ue_second_layer_initializer(*args, **kwargs):
+        global ue_second_layer_initial_values
+        if ue_second_layer_initial_values is None:
+            ue_second_layer_initial_values = tf.orthogonal_initializer(
+                gain=0.01
+            )(*args, **kwargs)
+        return ue_second_layer_initial_values
+
+    global huber_second_layer_initial_values
+    huber_second_layer_initial_values = None
+    def huber_second_layer_initializer(*args, **kwargs):
+        global huber_second_layer_initial_values
+        if huber_second_layer_initial_values is None:
+            huber_second_layer_initial_values = tf.orthogonal_initializer(
+                gain=0.01
+            )(*args, **kwargs)
+        return huber_second_layer_initial_values
+
+    hidden = 20
+    uedln = AdamUnnormalizedEntropyLossRegressor(
+        NetworkModel.factory(
+            '2lff',
+            input_node,
+            Layer.factory(
+                DenseLayer(
+                    hidden,
+                    use_bias=True,
+                    name='layer_1',
+                    kernel_initializer=first_layer_initializer
+                ),
+                activation=tf.nn.elu
+            ),
+            Layer.factory(
+                DenseLayer(
+                    price_training_data.num_outputs(),
+                    use_bias=True,
+                    name='layer_2',
+                    kernel_initializer=ue_second_layer_initializer
+                ),
+                activation=lambda z, *args, **kwargs: (
+                    tf.maximum(0.0, tf.exp(z, *args, **kwargs))
+                )
+            )
+        ),
+        'UE_2_orth',
+        price_target_node
+    )
+
+    features_training_data = ShuffledBatchedData(
+        x_train,
+        x_train,
+        batch_size=batch_size
+    )
+    features_eval_data = DataSet(
+        training=BatchedData(x_train, x_train),
+        testing=BatchedData(x_test, x_test),
+    )
+    features_target_node = tf.placeholder(
+        tf.float32,
+        shape=(None, features_training_data.num_outputs()),
+        name='features_target'
+    )
+
+    huber_dln = AdamHuberMultiRegressor(
+        NetworkModel.factory(
+            '1lff_shared',
+            input_node,
+            Layer.factory(
+                DenseLayer(
+                    hidden,
+                    use_bias=True,
+                    name='layer_1',
+                    kernel_initializer=first_layer_initializer
+                ),
+                activation=tf.nn.elu
+            )
+        ),
+        (
+            (
+                lambda i_node: (
+                    NetworkModel(
+                        'Huber_output_node',
+                        i_node,
+                        Layer.factory(
+                            DenseLayer(
+                                features_training_data.num_outputs(),
+                                use_bias=True,
+                                name='layer_2',
+                                kernel_initializer=(
+                                    huber_second_layer_initializer
+                                )
+                            )
+                        )
+                    )
+                ),
+                1.0
+            ),
+        ),
+        'Huber_2_orth',
+        features_target_node
+    )
+
+    multi_training_data = ShuffledBatchedData(
+        x_train,
+        np.concatenate((y_train, x_train), axis=1),
+        batch_size=batch_size
+    )
+    multi_eval_data = DataSet(
+        training=BatchedData(
+            x_train,
+            np.concatenate((y_train, x_train), axis=1)
+        ),
+        testing=BatchedData(
+            x_test,
+            np.concatenate((y_test, x_test), axis=1)
+        ),
+    )
+
+    multi_target_node = tf.placeholder(
+        tf.float32,
+        shape=(None, multi_training_data.num_outputs()),
+        name="multi_target"
+    )
+
+    multi_regressor = AdamUnnormalizedEntropyLossHuberMultiRegressor(
+        NetworkModel.factory(
+            '1lff_shared',
+            input_node,
+            Layer.factory(
+                DenseLayer(
+                    hidden,
+                    use_bias=True,
+                    name='layer_1',
+                    kernel_initializer=first_layer_initializer
+                ),
+                activation=tf.nn.elu
+            )
+        ),
+        (
+            (
+                lambda i_node: (
+                    NetworkModel(
+                        'UE_output_node',
+                        i_node,
+                        Layer.factory(
+                            DenseLayer(
+                                price_training_data.num_outputs(),
+                                use_bias=True,
+                                name='layer_2',
+                                kernel_initializer=ue_second_layer_initializer
+                            ),
+                            activation=lambda z, *args, **kwargs: (
+                                tf.maximum(0.0, tf.exp(z, *args, **kwargs))
+                            )
+                        )
+                    )
+                ),
+                1.0
+            ),
+            (
+                lambda i_node: (
+                    NetworkModel(
+                        'Huber_output_node',
+                        i_node,
+                        Layer.factory(
+                            DenseLayer(
+                                features_training_data.num_outputs(),
+                                use_bias=True,
+                                name='layer_2',
+                                kernel_initializer=(
+                                    huber_second_layer_initializer
+                                )
+                            )
+                        )
+                    )
+                ),
+                1.0
+            )
+        ),
+        'UE_plus_Huber_2_orth',
+        multi_target_node
+    )
+
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        tf.summary.FileWriter(experiment.path(), sess.graph)
+
+        saver = tf.train.Saver()
+        checkpoint_path = os.path.join(experiment.path(), "graph.0.ckpt")
+
+        tf.logging.info(
+            'Saving initial checkpoint in "{}".'.format(checkpoint_path)
+        )
+        saver.save(sess, checkpoint_path)
+
+        EvalTrainer(
+            experiment.path(),
+            multi_eval_data,
+            sess,
+            multi_training_data,
+            multi_regressor,
+            num_epochs=num_epochs,
+            epochs_between_evaluations=(
+                num_epochs * multi_training_data.num_batches() / 1000
+            )
+        ).run()
+
+        EvalTrainer(
+            experiment.path(),
+            features_eval_data,
+            sess,
+            features_training_data,
+            huber_dln,
+            num_epochs=num_epochs,
+            epochs_between_evaluations=(
+                num_epochs * features_training_data.num_batches() / 1000
+            )
+        ).run()
+
+        EvalTrainer(
+            experiment.path(),
+            price_eval_data,
+            sess,
+            price_training_data,
+            uedln,
+            num_epochs=num_epochs,
+            epochs_between_evaluations=(
+                num_epochs * price_training_data.num_batches() / 1000
+            )
+        ).run()
+
+        checkpoint_path = os.path.join(
+            experiment.path(),
+            "graph.{}.ckpt".format(
+                num_epochs * price_training_data.num_batches()
+            )
+        )
+        tf.logging.info(
+            'Saving final checkpoint in "{}".'.format(checkpoint_path)
+        )
+        saver.save(sess, checkpoint_path)
+
+
+if __name__ == '__main__':
+    fire.Fire(run)

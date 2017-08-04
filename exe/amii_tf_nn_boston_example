@@ -114,7 +114,6 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
     )
 
     uesln = AdamUnnormalizedEntropyLossRegressor(
-        'UE_1',
         NetworkModel.factory(
             '1lff',
             input_node,
@@ -125,15 +124,37 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
                     name='layer',
                     kernel_initializer=tf.zeros_initializer
                 ),
-                activation=tf.exp
+                activation=lambda z, *args, **kwargs: (
+                    tf.maximum(0.0, tf.exp(z, *args, **kwargs))
+                )
             )
         ),
+        'UE_1',
         target_node
     )
 
+    global first_layer_initial_values
+    first_layer_initial_values = None
+    def first_layer_initializer(*args, **kwargs):
+        global first_layer_initial_values
+        if first_layer_initial_values is None:
+            first_layer_initial_values = tf.orthogonal_initializer(
+                gain=0.01
+            )(*args, **kwargs)
+        return first_layer_initial_values
+
+    global second_layer_initial_values
+    second_layer_initial_values = None
+    def second_layer_initializer(*args, **kwargs):
+        global second_layer_initial_values
+        if second_layer_initial_values is None:
+            second_layer_initial_values = tf.orthogonal_initializer(
+                gain=0.01
+            )(*args, **kwargs)
+        return second_layer_initial_values
+
     hidden = 20
     uedln = AdamUnnormalizedEntropyLossRegressor(
-        'UE_2_orth',
         NetworkModel.factory(
             '2lff',
             input_node,
@@ -142,7 +163,7 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
                     hidden,
                     use_bias=True,
                     name='layer_1',
-                    kernel_initializer=tf.orthogonal_initializer
+                    kernel_initializer=first_layer_initializer
                 ),
                 activation=tf.nn.elu
             ),
@@ -151,16 +172,18 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
                     training_data.num_outputs(),
                     use_bias=True,
                     name='layer_2',
-                    kernel_initializer=tf.orthogonal_initializer
+                    kernel_initializer=second_layer_initializer
                 ),
-                activation=tf.exp
+                activation=lambda z, *args, **kwargs: (
+                    tf.maximum(0.0, tf.exp(z, *args, **kwargs))
+                )
             )
         ),
+        'UE_2_orth',
         target_node
     )
 
     maesln = AdamMaeRegressor(
-        'MAE_1',
         NetworkModel.factory(
             '1lff',
             input_node,
@@ -173,11 +196,11 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
                 )
             )
         ),
+        'MAE_1',
         target_node
     )
 
     maedln = AdamMaeRegressor(
-        'MAE_2_orth',
         NetworkModel.factory(
             '2lff',
             input_node,
@@ -186,7 +209,7 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
                     hidden,
                     use_bias=True,
                     name='layer_1',
-                    kernel_initializer=tf.orthogonal_initializer
+                    kernel_initializer=first_layer_initializer
                 ),
                 activation=tf.nn.elu
             ),
@@ -195,15 +218,15 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
                     training_data.num_outputs(),
                     use_bias=True,
                     name='layer_2',
-                    kernel_initializer=tf.orthogonal_initializer
+                    kernel_initializer=second_layer_initializer
                 )
             )
         ),
+        'MAE_2_orth',
         target_node
     )
 
     msesln = AdamMseRegressor(
-        'MSE_1',
         NetworkModel.factory(
             '1lff',
             input_node,
@@ -216,11 +239,11 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
                 )
             )
         ),
+        'MSE_1',
         target_node
     )
 
     msedln = AdamMseRegressor(
-        'MSE_2_orth',
         NetworkModel.factory(
             '2lff',
             input_node,
@@ -229,7 +252,7 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
                     hidden,
                     use_bias=True,
                     name='layer_1',
-                    kernel_initializer=tf.orthogonal_initializer
+                    kernel_initializer=first_layer_initializer
                 ),
                 activation=tf.nn.elu
             ),
@@ -238,10 +261,11 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
                     training_data.num_outputs(),
                     use_bias=True,
                     name='layer_2',
-                    kernel_initializer=tf.orthogonal_initializer
+                    kernel_initializer=second_layer_initializer
                 )
             )
         ),
+        'MSE_2_orth',
         target_node
     )
 

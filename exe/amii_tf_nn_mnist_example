@@ -81,7 +81,6 @@ def main():
 
     hidden = 1024
     adln = AdamCrossEntropyClassifer(
-        'AdamDoubleLayerFeedForward',
         NetworkModel.factory(
             'adln',
             input_node,
@@ -102,12 +101,11 @@ def main():
                 activation=tf.nn.softmax
             )
         ),
-        target_node,
-        learning_rate=0.1
+        'AdamDoubleLayerFeedForward',
+        target_node
     )
 
     asln = AdamCrossEntropyClassifer(
-        'AdamSingleLayerFeedForward',
         NetworkModel.factory(
             'asln',
             input_node,
@@ -120,8 +118,8 @@ def main():
                 activation=tf.nn.softmax
             )
         ),
-        target_node,
-        learning_rate=0.1
+        'AdamSingleLayerFeedForward',
+        target_node
     )
 
     with tf.Session() as sess:
