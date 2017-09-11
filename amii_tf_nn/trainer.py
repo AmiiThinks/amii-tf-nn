@@ -47,11 +47,13 @@ class Trainer(AbstractTrainer):
         for batch, _ in self.training_data.each_batch(
             self.batches_per_epoch
         ):
+            fd = {}
+            optimizers = []
             for e in self.estimators:
-                self.sess.run(
-                    e.optimizer,
-                    feed_dict=e.to_feed_dict(batch.x, batch.y)
-                )
+                fd[e.input_node()] = batch.x
+                fd[e.target_node] = batch.y
+                optimizers.append(e.optimizer)
+            self.sess.run(optimizers, feed_dict=fd)
 
 
 class EvalTrainer(Trainer):
@@ -91,8 +93,8 @@ class EvalTrainer(Trainer):
 
     def eval(self, dist_name, i):
         num_training_steps = i * self.batches_per_epoch
+        batch = self.eval_data[dist_name].next_batch()
         for e in self.monitored_estimators:
-            batch = self.eval_data[dist_name].next_batch()
             eval_vals = e.estimator.run_evals(self.sess, batch.x, batch.y)
             summaries = self.sess.run(
                 [e.summary_op, self.criterion_summary_op],

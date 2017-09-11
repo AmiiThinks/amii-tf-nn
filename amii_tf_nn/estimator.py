@@ -31,15 +31,13 @@ class AbstractEstimator(object):
     def _create_evals(self): return None
 
     def run_evals(self, sess, x, y):
-        return [
-            criterion.run(
-                sess,
-                feed_dict={
-                    self.input_node(): x,
-                    self.target_node: y
-                }
-            ) for criterion in self.eval_criteria
-        ]
+        return sess.run(
+            [criterion.node for criterion in self.eval_criteria],
+            feed_dict={
+                self.input_node(): x,
+                self.target_node: y
+            }
+        )
 
     def to_feed_dict(
         self,
