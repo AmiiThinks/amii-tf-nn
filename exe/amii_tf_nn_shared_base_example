@@ -10,7 +10,7 @@ from amii_tf_nn.data import Data, BatchedData, ShuffledBatchedData
 from amii_tf_nn.data_set import DataSet
 from amii_tf_nn.network_model import NetworkModel
 from amii_tf_nn.layer import Layer
-from amii_tf_nn.experiment import Experiment
+from amii_tf_nn.experiment import TensorboardExperiment
 from amii_tf_nn.trainer import EvalTrainer
 from sklearn import datasets
 from amii_tf_nn.multi_estimator import MultiEstimator
@@ -121,7 +121,7 @@ def run(seed=1, batch_size=30, test_proportion=0.1, num_epochs=500):
         test_proportion (float): The proportion of points to use as testing data. Defaults to 0.1.
         num_epochs (int): The number of epochs to run. Defaults to 500.
     '''
-    experiment = Experiment(
+    experiment = TensorboardExperiment(
         'shared_basis_example',
         root=os.path.join(os.getcwd(), 'tmp'),
         seed=seed,

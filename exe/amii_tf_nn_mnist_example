@@ -6,7 +6,7 @@ from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
 from amii_tf_nn.data import Data, BatchedData
 from amii_tf_nn.data_set import DataSet
-from amii_tf_nn.experiment import Experiment
+from amii_tf_nn.experiment import TensorboardExperiment
 from amii_tf_nn.classifier import CrossEntropyClassifer
 from amii_tf_nn.network_model import NetworkModel
 from amii_tf_nn.layer import Layer
@@ -56,7 +56,7 @@ def batched_mnist_data(batch_size):
 
 
 def main():
-    experiment = Experiment(
+    experiment = TensorboardExperiment(
         'amii_tf_nn_mnist_example',
         root=os.path.join(os.getcwd(), 'tmp'),
         seed=1,

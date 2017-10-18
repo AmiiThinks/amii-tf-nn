@@ -28,8 +28,12 @@ class Experiment(object):
         self.tag = str(seed) if tag is None else str(tag)
         self.seed = seed
         tf.logging.set_verbosity(log_level)
+        self.reset_random_state()
+
+    def reset_random_state(self):
         np.random.seed(self.seed)
         tf.set_random_seed(self.seed)
+        return self
 
     def label(self): return self.name + '_' + self.tag
     def path(self): return path.join(self.root, self.label())
@@ -42,11 +46,6 @@ class Experiment(object):
         if not path.exists(self.path()): makedirs(self.path())
         with open(self.config_file(), 'w') as f:
             dump(self.config(), stream=f, default_flow_style=False)
-        tf.logging.info(
-            'Run `tensorboard --logdir {}` to visualize results.'.format(
-                self.path()
-            )
-        )
         return self
 
     def write_config(self):
@@ -59,3 +58,14 @@ class Experiment(object):
             'seed': self.seed,
             'tag': self.tag
         }
+
+
+class TensorboardExperiment(Experiment):
+    def ensure_present(self):
+        super(TensorboardExperiment, self).ensure_present()
+        tf.logging.info(
+            'Run `tensorboard --logdir {}` to visualize results.'.format(
+                self.path()
+            )
+        )
+        return self
