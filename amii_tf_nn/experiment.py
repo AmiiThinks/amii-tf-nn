@@ -2,6 +2,7 @@ from os import path, makedirs, getcwd
 from yaml import dump, load
 import tensorflow as tf
 import numpy as np
+import random
 
 
 class Experiment(object):
@@ -31,6 +32,7 @@ class Experiment(object):
         self.reset_random_state()
 
     def reset_random_state(self):
+        random.seed(self.seed)
         np.random.seed(self.seed)
         tf.set_random_seed(self.seed)
         return self
